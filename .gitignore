@@ -1,3 +1,15 @@
+# Imges
+imgs
+img
+
+# Database
+*.db
+
+#Mac and IDE files
+.DS_Store
+.idea
+.code
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
