@@ -5,6 +5,10 @@ from bot.photos import (
     photo_selector,
     publish_photo
 )
+from bot.keyboard import (
+    publish_placeholder,
+    publishing_ended
+)
 from utils import (
     GDrive,
     settings,
@@ -14,7 +18,6 @@ from utils import (
 )
 
 logger = get_logger(__name__)
-idx = 0
 
 
 async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -64,7 +67,7 @@ async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     query = upd.callback_query
     await query.answer()
-
+    admin_user = upd.effective_user.username
     users = DBManager.get_all_users()
     photos = IMGManager.get_files_paths()
 
@@ -73,36 +76,52 @@ async def button(upd: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     idx = context.user_data.get("idx", 1)
-    print(idx)
+
     if query.data == "next":
-        if idx < len(photos) - 1:
-            idx += 1
-            print(f"IDX: {idx}")
-            context.user_data["idx"] = idx
-            await photo_selector(upd, context, photos[idx])
-        else:
-            await query.edit_message_text("Это последняя фотография.")
+        idx += 1
+        context.user_data["idx"] = idx
+        logger.info(
+            f"User: {admin_user} pressed (next) button. "
+            f"Index: {idx} "
+            f"Loaded image: {photos[idx]}"
+        )
+        await photo_selector(upd, context, photos[idx])
 
     elif query.data == "prev":
-        if idx > 0:
-            idx -= 1
-            context.user_data["idx"] = idx
-            print(f"IDX: {idx}")
-            await photo_selector(upd, context, photos[idx])
-        else:
-            await query.edit_message_text("Это первая фотография.")
+        idx -= 1
+        context.user_data["idx"] = idx
+        logger.info(
+            f"User: {admin_user} pressed (prev) button. "
+            f"Index: {idx} "
+            f"Loaded image: {photos[idx]}"
+        )
+        await photo_selector(upd, context, photos[idx])
 
     elif query.data == "publish":
+        logger.info(
+            f"User: {admin_user} pressed (publish) button."
+            f"Index: {idx} "
+            f"Loaded image: {photos[idx]}"
+        )
+        await query.edit_message_reply_markup(
+            reply_markup=publish_placeholder()
+        )
+
         photo_path = photos[idx]
         for uid, uname in users:
+            logger.info(
+                f"Attempt to send image to user: {uname} with id: {uid}"
+            )
             try:
                 await publish_photo(upd, context, uid, photo_path)
+                logger.info(f"Image {photo_path} has been published")
             except Exception as e:
                 logger.error(f"Error publishing to {uid} (@{uname}): {e}")
 
         if idx < len(photos) - 1:
             idx += 1
             context.user_data["idx"] = idx
+            logger.info(f"Calling photo_selector with image: {photos[idx]}")
             await photo_selector(upd, context, photos[idx])
         else:
-            await query.edit_message_text("Фотографии закончились.")
+            await query.edit_message_reply_markup(reply_markup=publishing_ended())

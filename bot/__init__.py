@@ -1,4 +1,8 @@
-from bot.handlers import start_cmd, button, update_cmd
+from bot.handlers import (
+    start_cmd,
+    button,
+    update_cmd
+)
 
 
 __all__ = [
