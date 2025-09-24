@@ -24,9 +24,8 @@ This project is a Telegram bot designed to showcase photos of Wrocław. It allow
     Using uv:
 
     ```bash
-    uv venv .venv
+    uv sync
     source .venv/bin/activate
-    uv pip install -r requirements.txt
     ```
 
     Alternatively, using pip:
@@ -34,7 +33,7 @@ This project is a Telegram bot designed to showcase photos of Wrocław. It allow
     ```bash
     python3 -m venv .venv
     source .venv/bin/activate
-    pip install -r requirements.txt
+    pip install -r .
     ```
 
 3.  **Configuration:**
