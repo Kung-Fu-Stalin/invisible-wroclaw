@@ -24,10 +24,7 @@ class GDrive:
         ).name
         self.incognito_user_id = "AIzaSyC1qbk75NzWBvSaDh6KnsjjA9pIrP4lYIE"
         self.google_job_domain = "https://takeout-pa-qw.clients6.google.com"
-        self.headers = {
-            "referer": "https://drive.google.com/",
-            "user-agent": ""
-        }
+        self.headers = {"referer": "https://drive.google.com/", "user-agent": ""}
         self.session = self._create_session()
 
     @staticmethod
@@ -42,18 +39,12 @@ class GDrive:
         response = self.session.request(
             method="POST",
             url=f"{self.google_job_domain}/v1/exports",
-            params={
-                "key": self.incognito_user_id
-            },
+            params={"key": self.incognito_user_id},
             headers=self.headers,
             json={
                 "archivePrefix": archive_prefix,
-                "items": [
-                    {
-                        "id": self.google_drive_id
-                    }
-                ]
-            }
+                "items": [{"id": self.google_drive_id}],
+            },
         )
         response.raise_for_status()
         logger.info("[✅] Archiving process has been initiated")
@@ -63,10 +54,8 @@ class GDrive:
         response = self.session.request(
             method="GET",
             url=f"{self.google_job_domain}/v1/exports/{job_id}",
-            params={
-                "key": self.incognito_user_id
-            },
-            headers=self.headers
+            params={"key": self.incognito_user_id},
+            headers=self.headers,
         )
         response.raise_for_status()
         return response.json()
@@ -75,18 +64,22 @@ class GDrive:
         logger.info("[⚠️] Checking Google Drive directory availability...")
         response = requests.get(self.google_storage_url)
         if response.status_code == 200:
-            logger.info(f"[✅] Directory: {self.google_storage_url} is available for download.")
+            logger.info(
+                f"[✅] Directory: {self.google_storage_url} is available for download."
+            )
             return True
         else:
-            logger.error(f"[❗] WARNING. Directory: {self.google_storage_url} is not available")
+            logger.error(
+                f"[❗] WARNING. Directory: {self.google_storage_url} is not available"
+            )
             raise ConnectionAbortedError
 
-    def _download_file(self, url: str, output_path: str | Path,
-                        chunk_size: int = 1024 * 1024):
+    def _download_file(
+        self, url: str, output_path: str | Path, chunk_size: int = 1024 * 1024
+    ):
         logger.info("[⚠️] Starting download...")
 
-        with self.session.request(method="GET", url=url,
-                                  stream=True) as response:
+        with self.session.request(method="GET", url=url, stream=True) as response:
             response.raise_for_status()
             total_size = int(response.headers.get("Content-Length", 0))
 
@@ -94,7 +87,9 @@ class GDrive:
                 filename = "file-archive.zip"
                 output_path = Path(output_path, filename)
 
-            with output_path.open("wb") as file, tqdm(
+            with (
+                output_path.open("wb") as file,
+                tqdm(
                     total=total_size,
                     unit="B",
                     unit_scale=True,
@@ -104,8 +99,9 @@ class GDrive:
                     ascii=True,
                     file=sys.stdout,
                     ncols=80,
-                    bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}"
-            ) as progress:
+                    bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
+                ) as progress,
+            ):
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:
                         file.write(chunk)
@@ -131,7 +127,5 @@ class GDrive:
 
         r_json = self._get_archiving_status(job_id)
         download_link = r_json["exportJob"]["archives"][0]["storagePath"]
-        archive_path = self._download_file(
-            url=download_link, output_path=download_path
-        )
+        archive_path = self._download_file(url=download_link, output_path=download_path)
         return archive_path

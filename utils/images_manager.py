@@ -28,9 +28,9 @@ class ImagesManager:
         if not self.is_file_exists(archive_path):
             raise FileExistsError(f"Archive by path: {archive_path} is not found")
 
-        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+        with zipfile.ZipFile(archive_path, "r") as zip_ref:
             for member in zip_ref.namelist():
-                if member.endswith('/'):
+                if member.endswith("/"):
                     continue
                 target_path = Path(self.path, Path(member).name)
                 counter = 1
@@ -38,17 +38,15 @@ class ImagesManager:
                 while target_path.exists():
                     target_path = Path(self.path, f"{stem}_{counter}{suffix}")
                     counter += 1
-                with zip_ref.open(member) as source, open(target_path, 'wb') as target:
+                with zip_ref.open(member) as source, open(target_path, "wb") as target:
                     target.write(source.read())
 
-        logger.info(
-            f"Extraction has been successful and available here: {self.path}"
-        )
+        logger.info(f"Extraction has been successful and available here: {self.path}")
         Path(archive_path).unlink()
 
     def is_dir_empty(self):
         logger.warning("Checking files in directory")
-        is_empty = not any(f for f in self.path.iterdir() if not f.name.startswith('.'))
+        is_empty = not any(f for f in self.path.iterdir() if not f.name.startswith("."))
         return is_empty
 
     def clear_dir(self):
@@ -61,7 +59,7 @@ class ImagesManager:
         logger.warning("!!!Directory has been purged!!!")
 
     def get_files_paths(self):
-        image_extensions = {'.jpg', '.jpeg', '.png'}
+        image_extensions = {".jpg", ".jpeg", ".png"}
         files = [
             str(item.resolve())
             for item in self.path.iterdir()
@@ -71,12 +69,14 @@ class ImagesManager:
         return sorted(
             files,
             key=lambda f: (
-                0, int(f.split('/')[-1].split('.')[0])
-            ) if f.split('/')[-1].split('.')[0].isdigit() else (1, f.lower())
+                (0, int(f.split("/")[-1].split(".")[0]))
+                if f.split("/")[-1].split(".")[0].isdigit()
+                else (1, f.lower())
+            ),
         )
 
     @staticmethod
-    def read_image_file(file_path: str | Path, mode='rb'):
+    def read_image_file(file_path: str | Path, mode="rb"):
         if not Path(file_path).is_file():
             raise ValueError(f"Incorrect file_path: {file_path}")
         if not Path(file_path).exists():

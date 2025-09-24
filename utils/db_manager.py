@@ -1,4 +1,12 @@
-from peewee import *
+from peewee import (
+    SQL,
+    Model,
+    CharField,
+    IntegerField,
+    DateTimeField,
+    ForeignKeyField,
+    SqliteDatabase,
+)
 from pathlib import Path
 
 from utils.config import settings
@@ -10,11 +18,22 @@ db = SqliteDatabase(settings.DATABASE_PATH)
 class Users(Model):
     telegram_user_id = CharField(unique=True)
     telegram_user_name = CharField(null=True)
-    created_at = DateTimeField(constraints=[SQL('DEFAULT CURRENT_TIMESTAMP')])
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")])
 
     class Meta:
         database = db
-        table_name = 'users'
+        table_name = "users"
+
+
+class PublishedMessages(Model):
+    user = ForeignKeyField(Users, backref="messages", on_delete="CASCADE")
+    message_id = IntegerField()
+    chat_id = IntegerField()
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")])
+
+    class Meta:
+        database = db
+        table_name = "published_messages"
 
 
 class DBConnectionContext:
@@ -46,19 +65,19 @@ class DatabaseManager:
 
     def _ensure_tables(self):
         with DBConnectionContext(self.db):
-            self.db.create_tables([Users], safe=True)
+            self.db.create_tables([Users, PublishedMessages], safe=True)
 
     def _ensure_columns(self):
         with DBConnectionContext(self.db):
-            columns = [c.name for c in self.db.get_columns('users')]
+            columns = [c.name for c in self.db.get_columns("users")]
 
-            required_columns = {
-                "telegram_user_name": "TEXT"
-            }
+            required_columns = {"telegram_user_name": "TEXT"}
 
             for col, col_type in required_columns.items():
                 if col not in columns:
-                    self.db.execute_sql(f'ALTER TABLE users ADD COLUMN {col} {col_type};')
+                    self.db.execute_sql(
+                        f"ALTER TABLE users ADD COLUMN {col} {col_type};"
+                    )
 
     def _get_user(self, telegram_user_id):
         try:
@@ -82,8 +101,7 @@ class DatabaseManager:
             if self.user_exists(telegram_user_id):
                 return None
             return Users.create(
-                telegram_user_id=telegram_user_id,
-                telegram_user_name=telegram_user_name
+                telegram_user_id=telegram_user_id, telegram_user_name=telegram_user_name
             )
 
     def delete_user(self, telegram_user_id):
@@ -96,6 +114,22 @@ class DatabaseManager:
     def clear_all(self):
         with self.transaction():
             Users.delete().execute()
+
+    def add_published_message(self, telegram_user_id, message_id, chat_id):
+        user = self._get_user(telegram_user_id)
+        if not user:
+            return None
+        with self.transaction():
+            return PublishedMessages.create(
+                user=user, message_id=message_id, chat_id=chat_id
+            )
+
+    def get_all_published_messages(self):
+        return PublishedMessages.select()
+
+    def clear_all_published_messages(self):
+        with self.transaction():
+            PublishedMessages.delete().execute()
 
 
 DBManager = DatabaseManager(settings.DATABASE_PATH)

@@ -18,3 +18,8 @@ settings = Dynaconf(
 settings.PROJECT_ROOT = PROJECT_DIR
 settings.IMAGES_DIR = Path(PROJECT_DIR, settings.IMAGES_DIR).resolve()
 settings.DATABASE_PATH = Path(PROJECT_DIR, settings.DATABASE).resolve()
+settings.RESOURCES = Path(PROJECT_DIR, "resources")
+settings.UI = Path(settings.RESOURCES, "ui.json")
+
+if not settings.TELEGRAM_TOKEN:
+    raise EnvironmentError("Environment variable TELEGRAM_TOKEN is not found!")

@@ -1,0 +1,29 @@
+repos:
+  - repo: local
+    hooks:
+
+      - id: black
+        name: black
+        entry: black
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: ruff
+        name: ruff
+        entry: ruff
+        language: system
+        types: [python]
+        args: [check, ., --fix]
+
+      - id: trailing-whitespace
+        name: trailing-whitespace
+        entry: trailing-whitespace-fixer
+        language: system
+        types: [text]
+
+      - id: end-of-file-fixer
+        name: end-of-file-fixer
+        entry: end-of-file-fixer
+        language: system
+        types: [text]
