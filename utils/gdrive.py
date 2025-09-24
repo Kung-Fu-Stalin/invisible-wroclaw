@@ -7,7 +7,6 @@ import requests
 from tqdm import tqdm
 
 from utils.logger import get_logger
-from utils.errors import GoogleDriveDirectoryAccessException
 
 
 logger = get_logger(__name__)
@@ -80,7 +79,7 @@ class GDrive:
             return True
         else:
             logger.error(f"[❗] WARNING. Directory: {self.google_storage_url} is not available")
-            raise GoogleDriveDirectoryAccessException(self.google_storage_url)
+            raise ConnectionAbortedError
 
     def _download_file(self, url: str, output_path: str | Path,
                         chunk_size: int = 1024 * 1024):

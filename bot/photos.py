@@ -1,31 +1,52 @@
 from telegram import InputMediaPhoto
 
-from bot.keyboard import get_images_controls
-from utils import IMGManager
+from bot.keyboard import get_photo_selector_control
+from utils import IMGManager, get_logger
 
 
-async def create_admin_message(update, file_path):
-    await update.message.reply_photo(
-        photo=IMGManager.read_image_file(file_path),
-        reply_markup=get_images_controls()
-    )
+logger = get_logger(__name__)
 
 
-async def publish_photo(update, context, chat_id, file_path, msg=None):
-    await context.bot.send_photo(
-        chat_id=chat_id,
-        photo=IMGManager.read_image_file(file_path),
-        caption=msg
-    )
+async def publish_photo_to_all(context, users, photo_path, query):
+    for uid, uname in users:
+        try:
+            await context.bot.send_photo(
+                chat_id=uid,
+                photo=IMGManager.read_image_file(photo_path)
+            )
+            logger.info(f"Image {photo_path} has been published to {uname}")
+        except Exception as e:
+            logger.error(f"Error publishing to {uid} (@{uname}): {e}")
 
-
-async def photo_selector(update, context, file_path):
-    query = update.callback_query
-    await context.bot.edit_message_media(
+    await context.bot.edit_message_reply_markup(
         chat_id=query.message.chat_id,
         message_id=query.message.message_id,
-        media=InputMediaPhoto(
-            IMGManager.read_image_file(file_path)
-        ),
-        reply_markup=get_images_controls()
+        reply_markup=get_photo_selector_control()
     )
+
+
+async def photo_selector(update, context, file_paths):
+    idx = context.user_data.get("idx", 0)
+    path = file_paths[idx]
+
+    first_message = context.user_data.get("first_message", True)
+
+    if first_message:
+        if update.message:
+            await update.message.reply_photo(
+                photo=IMGManager.read_image_file(path),
+                reply_markup=get_photo_selector_control()
+            )
+        context.user_data["first_message"] = False
+    else:
+        query = update.callback_query
+        if query:
+            await context.bot.edit_message_media(
+                chat_id=query.message.chat_id,
+                message_id=query.message.message_id,
+                media=InputMediaPhoto(
+                    IMGManager.read_image_file(path)
+                ),
+                reply_markup=get_photo_selector_control()
+            )
+

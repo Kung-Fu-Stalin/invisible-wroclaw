@@ -9,7 +9,7 @@ db = SqliteDatabase(settings.DATABASE_PATH)
 
 class Users(Model):
     telegram_user_id = CharField(unique=True)
-    telegram_user_name = CharField(null=True)  # можно оставить пустым
+    telegram_user_name = CharField(null=True)
     created_at = DateTimeField(constraints=[SQL('DEFAULT CURRENT_TIMESTAMP')])
 
     class Meta:

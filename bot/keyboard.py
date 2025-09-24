@@ -1,14 +1,18 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardMarkup
+)
 
 
-def get_images_controls():
+def get_photo_selector_control():
     keyboard = [
         [
             InlineKeyboardButton("⬅️ Предыдущее", callback_data="prev"),
             InlineKeyboardButton("➡️ Следующее", callback_data="next")
         ],
         [
-            InlineKeyboardButton("✅ Опубликовать", callback_data="publish")
+            InlineKeyboardButton("✅ Опубликовать", callback_data="publish"),
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -21,8 +25,14 @@ def publish_placeholder():
     return InlineKeyboardMarkup(keyboard)
 
 
-def publishing_ended():
+def admin_control():
     keyboard = [
-        [InlineKeyboardButton("Фотографии закончились", callback_data="noop")]
+        [
+            "🔄 Обновить фотографии",
+            "🚫 Закончить экскурсию"
+        ],
+        [
+            "🏞️ Контроль изображений"
+        ]
     ]
-    return InlineKeyboardMarkup(keyboard)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)

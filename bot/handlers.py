@@ -1,13 +1,14 @@
+import asyncio
+
 from telegram import Update
 from telegram.ext import ContextTypes
 from bot.photos import (
-    create_admin_message,
     photo_selector,
-    publish_photo
+    publish_photo_to_all
 )
 from bot.keyboard import (
     publish_placeholder,
-    publishing_ended
+    admin_control
 )
 from utils import (
     GDrive,
@@ -21,107 +22,80 @@ logger = get_logger(__name__)
 
 
 async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
+    await upd.message.reply_text("Начат процесс скачивания фотографий из Google Drive")
     logger.info("[!] Called update command")
     gdrive_control = GDrive(settings.IMAGES_ARCHIVE)
     archive_path = gdrive_control.download_archive(settings.IMAGES_DIR)
+    await upd.message.reply_text("Архив скачан, начинаю распаковку...")
     IMGManager.extract_archive(archive_path)
-    await upd.message.reply_text("Обновление завершено")
+    files = IMGManager.get_files_paths()
+    await upd.message.reply_text(f"Обновление завершено. Всего: {len(files)} изображений. Нажмите 'Контроль изображений'")
 
 
 async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = upd.effective_user.id
     user_name = upd.effective_user.username
 
-    is_user = ((user_id not in settings.ADMINS)
-               and (user_name not in settings.ADMINS))
+    is_user = user_id not in settings.ADMINS and user_name not in settings.ADMINS
 
     if is_user:
         if user_name:
-            DBManager.add_user(
-                telegram_user_id=user_id,
-                telegram_user_name=user_name
-            )
+            DBManager.add_user(telegram_user_id=user_id, telegram_user_name=user_name)
             logger.info(f"User: @{user_name} has been added to the subscription list")
         else:
             DBManager.add_user(telegram_user_id=user_id)
-            logger.info(f"User: {user_id} has been added to the subscription list")
+            logger.info(f"User: #{user_id} has been added to the subscription list")
 
         await upd.message.reply_text("Вы подписаны на рассылку.")
 
     else:
-        await upd.message.reply_text(f"Админ @{user_name} добро пожаловать!")
-
+        await upd.message.reply_text(
+            f"Админ @{user_name} вход выполнен", reply_markup=admin_control()
+        )
         if IMGManager.is_dir_empty():
+            logger.info(f"No files found in {settings.IMAGES_DIR}")
             await upd.message.reply_text(
-                "ВНИМАНИЕ! Локально не найдено ни одной фотографии! Запустите /update"
+                "ВНИМАНИЕ! Локально не найдено ни одной фотографии! Нажмите 'Обновить фотографии'"
             )
             return
 
-        photos = IMGManager.get_files_paths()
-        if photos:
-            start_index = 0
-            context.user_data["idx"] = start_index
-            await create_admin_message(upd, file_path=photos[start_index])
+        context.user_data["idx"] = 0
+        context.user_data["first_message"] = True
+        files = IMGManager.get_files_paths()
+        await photo_selector(upd, context, file_paths=files)
+
 
 
 async def button(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     query = upd.callback_query
     await query.answer()
-    admin_user = upd.effective_user.username
-    users = DBManager.get_all_users()
-    photos = IMGManager.get_files_paths()
 
-    if not photos:
+    users = DBManager.get_all_users()
+    files = IMGManager.get_files_paths()
+
+    if not files:
         await query.edit_message_text("Нет доступных фотографий.")
         return
 
-    idx = context.user_data.get("idx", 1)
+    idx = context.user_data.get("idx", 0)
 
-    if query.data == "next":
-        idx += 1
+    if query.data in ["next", "prev"]:
+        if query.data == "next":
+            idx = (idx + 1) % len(files)
+        else:
+            idx = (idx - 1) % len(files)
         context.user_data["idx"] = idx
-        logger.info(
-            f"User: {admin_user} pressed (next) button. "
-            f"Index: {idx} "
-            f"Loaded image: {photos[idx]}"
-        )
-        await photo_selector(upd, context, photos[idx])
-
-    elif query.data == "prev":
-        idx -= 1
-        context.user_data["idx"] = idx
-        logger.info(
-            f"User: {admin_user} pressed (prev) button. "
-            f"Index: {idx} "
-            f"Loaded image: {photos[idx]}"
-        )
-        await photo_selector(upd, context, photos[idx])
+        logger.info(f"Current idx: {idx} preview photo: {files[idx]}")
+        await photo_selector(upd, context, file_paths=files)
+        return
 
     elif query.data == "publish":
-        logger.info(
-            f"User: {admin_user} pressed (publish) button."
-            f"Index: {idx} "
-            f"Loaded image: {photos[idx]}"
-        )
-        await query.edit_message_reply_markup(
-            reply_markup=publish_placeholder()
-        )
+        await query.edit_message_reply_markup(reply_markup=publish_placeholder())
+        photo_path = files[idx]
 
-        photo_path = photos[idx]
-        for uid, uname in users:
-            logger.info(
-                f"Attempt to send image to user: {uname} with id: {uid}"
-            )
-            try:
-                await publish_photo(upd, context, uid, photo_path)
-                logger.info(f"Image {photo_path} has been published")
-            except Exception as e:
-                logger.error(f"Error publishing to {uid} (@{uname}): {e}")
+        asyncio.create_task(publish_photo_to_all(context, users, photo_path, query))
 
-        if idx < len(photos) - 1:
-            idx += 1
-            context.user_data["idx"] = idx
-            logger.info(f"Calling photo_selector with image: {photos[idx]}")
-            await photo_selector(upd, context, photos[idx])
-        else:
-            await query.edit_message_reply_markup(reply_markup=publishing_ended())
+
+async def purge_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("PURGING TIME")
+    await upd.message.reply_text("Not implemented yet")

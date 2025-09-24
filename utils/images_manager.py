@@ -3,7 +3,6 @@ from pathlib import Path
 
 from utils import settings
 from utils.logger import get_logger
-from utils.errors import NotAFileException
 
 
 logger = get_logger(__name__)
@@ -21,7 +20,7 @@ class ImagesManager:
         logger.info(f"Checking file by path: {path}")
         if path.is_dir():
             logger.error(f"{path} is a dir!")
-            raise NotAFileException(path)
+            raise FileNotFoundError(path)
         return path.exists()
 
     def extract_archive(self, archive_path: str | Path):
@@ -49,8 +48,7 @@ class ImagesManager:
 
     def is_dir_empty(self):
         logger.warning("Checking files in directory")
-        is_empty = not any(self.path.iterdir())
-        logger.warning(f"Current status: {is_empty}")
+        is_empty = not any(f for f in self.path.iterdir() if not f.name.startswith('.'))
         return is_empty
 
     def clear_dir(self):
@@ -63,9 +61,13 @@ class ImagesManager:
         logger.warning("!!!Directory has been purged!!!")
 
     def get_files_paths(self):
+        image_extensions = {'.jpg', '.jpeg', '.png'}
         files = [
-            str(item.resolve()) for item in self.path.iterdir() if item.is_file()
+            str(item.resolve())
+            for item in self.path.iterdir()
+            if item.is_file() and item.suffix.lower() in image_extensions
         ]
+
         return sorted(
             files,
             key=lambda f: (
@@ -73,7 +75,8 @@ class ImagesManager:
             ) if f.split('/')[-1].split('.')[0].isdigit() else (1, f.lower())
         )
 
-    def read_image_file(self, file_path: str | Path, mode='rb'):
+    @staticmethod
+    def read_image_file(file_path: str | Path, mode='rb'):
         if not Path(file_path).is_file():
             raise ValueError(f"Incorrect file_path: {file_path}")
         if not Path(file_path).exists():
