@@ -22,7 +22,7 @@ class GDrive:
         self.google_drive_id = PurePosixPath(
             urlparse(self.google_storage_url).path
         ).name
-        self.incognito_user_id = "AIzaSyC1qbk75NzWBvSaDh6KnsjjA9pIrP4lYIE"
+        self.incognito_user_key = "AIzaSyC1qbk75NzWBvSaDh6KnsjjA9pIrP4lYIE"
         self.google_job_domain = "https://takeout-pa-qw.clients6.google.com"
         self.headers = {"referer": "https://drive.google.com/", "user-agent": ""}
         self.session = self._create_session()
@@ -39,7 +39,7 @@ class GDrive:
         response = self.session.request(
             method="POST",
             url=f"{self.google_job_domain}/v1/exports",
-            params={"key": self.incognito_user_id},
+            params={"key": self.incognito_user_key},
             headers=self.headers,
             json={
                 "archivePrefix": archive_prefix,
@@ -54,7 +54,7 @@ class GDrive:
         response = self.session.request(
             method="GET",
             url=f"{self.google_job_domain}/v1/exports/{job_id}",
-            params={"key": self.incognito_user_id},
+            params={"key": self.incognito_user_key},
             headers=self.headers,
         )
         response.raise_for_status()
