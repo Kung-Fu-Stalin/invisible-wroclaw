@@ -4,12 +4,14 @@ from utils.config import settings
 from utils.logger import get_logger
 from utils.db_manager import DBManager
 from utils.images_manager import IMGManager
+from utils.resizer import TelegramImageResizer
 
 __all__ = [
     "UI",
     "GDrive",
     "settings",
-    "get_logger",
     "DBManager",
     "IMGManager",
+    "get_logger",
+    "TelegramImageResizer",
 ]

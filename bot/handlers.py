@@ -4,7 +4,15 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from bot.photos import photo_selector, publish_photo_to_all
 from bot.keyboard import publish_placeholder, admin_control
-from utils import UI, GDrive, settings, get_logger, DBManager, IMGManager
+from utils import (
+    UI,
+    GDrive,
+    settings,
+    get_logger,
+    DBManager,
+    IMGManager,
+    TelegramImageResizer,
+)
 
 
 logger = get_logger(__name__)
@@ -12,15 +20,26 @@ logger = get_logger(__name__)
 
 async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     await upd.message.reply_text(UI.google_drive_download_msg)
-    logger.info("[!] Called update command")
+    IMGManager.clear_dir()
+    logger.info("[!!!] Called update command...")
+
     gdrive_control = GDrive(settings.IMAGES_ARCHIVE)
     archive_path = gdrive_control.download_archive(settings.IMAGES_DIR)
+
     await upd.message.reply_text(UI.google_drive_archive_msg)
     IMGManager.extract_archive(archive_path)
+
+    await upd.message.reply_text(UI.google_drive_start_check_images)
+
+    resizer = TelegramImageResizer(settings.IMAGES_DIR)
+    resizer.process_all()
+
+    await upd.message.reply_text(UI.google_drive_finish_check_images)
+
     files = IMGManager.get_files_paths()
     await upd.message.reply_text(
         UI.google_drive_update_msg_template.replace("{files}", str(len(files))).replace(
-            "{button}", UI.refresh_photo_btn
+            "{button}", UI.admin_control_photo_btn
         )
     )
 
@@ -65,7 +84,7 @@ async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info(f"No files found in {settings.IMAGES_DIR}")
             await upd.message.reply_text(
                 UI.photos_not_found_msg_template.replace(
-                    "{button}", UI.refresh_photo_btn
+                    "{button}", UI.admin_refresh_photo_btn
                 )
             )
             return
