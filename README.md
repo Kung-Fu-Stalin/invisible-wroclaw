@@ -2,7 +2,17 @@
 
 ## Description
 
-This project is a Telegram bot designed to showcase photos of Wrocław. It allows administrators to update the photo collection from a Google Drive archive and publish them to subscribed users.
+This project is a Telegram bot designed to showcase photos of Wrocław. It allows administrators to update the photo collection from a Google Drive archive and publish them to subscribed users, and remove all posts if needed
+
+<img src="docs/admin_panel.jpg" alt="Tour guide panel" width="300">
+
+<p>And participants panel:</p>
+
+<div style="display: flex; gap: 10px; align-items: flex-start;">
+  <img src="docs/user_photos.png" alt="Tourist panel" width="300">
+  <img src="docs/user_cleanup.png" alt="Tourist panel cleaned up" width="300">
+</div>
+
 
 ## Prerequisites
 
@@ -69,31 +79,4 @@ This project is a Telegram bot designed to showcase photos of Wrocław. It allow
 
 ```bash
 python [main.py]
-```
-```
-.
-├── .env                      # Environment variables (Telegram token)
-├── .gitignore                # Specifies intentionally untracked files that Git should ignore
-├── .pre-commit-config.yaml   # Configuration for pre-commit hooks
-├── .python-version           # Specifies the Python version for the project
-├── bot                       # Telegram bot related files
-│   ├── [__init__.py]
-│   ├── [handlers.py]         # Bot command handlers
-│   ├── [keyboard.py]         # Inline keyboard definitions
-│   └── [photos.py]           # Photo publishing logic
-├── [main.py]                 # Main application entry point
-├── [pyproject.toml]          # Project metadata and dependencies
-├── [README.md]               # Project documentation
-├── resources                 # Additional resources
-│   └── [ui.json]             # User interface strings
-├── [settings.yaml]           # Project settings
-├── utils                     # Utility modules
-│   ├── [__init__.py]
-│   ├── [config.py]           # Configuration management
-│   ├── [db_manager.py]       # Database management
-│   ├── [gdrive.py]           # Google Drive interaction
-│   ├── [images_manager.py]   # Image file management
-│   ├── [logger.py]           # Logging utility
-│   └── [ui.py]               # UI strings management
-└── [uv.lock]                 # Dependency lock file for uv
 ```
