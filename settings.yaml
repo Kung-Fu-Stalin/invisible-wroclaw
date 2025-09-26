@@ -1,7 +1,5 @@
-images_archive: https://drive.google.com/drive/folders/1PJsdeacvtmUrNWRKZta8fYERdHdwasBf
+images_archive: arhive_url_here
 images_name: wroclaw_archive.zip
 images_dir: imgs
 database: bot.db
-admins: [
-  TheGodImperorOfBelarus
-]
+admins: []
