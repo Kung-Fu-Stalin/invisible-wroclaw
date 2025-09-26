@@ -13,6 +13,9 @@ class ImagesManager:
     def __init__(self, path: str | Path):
         logger.info(f"Creating images controller instance for {path}")
         self.path = Path(path)
+        self.create_imgs_dir()
+
+    def create_imgs_dir(self):
         self.path.mkdir(parents=True, exist_ok=True)
 
     def is_file_exists(self, file_name: str | Path):
