@@ -6,6 +6,7 @@ from bot.photos import photo_selector, publish_photo_to_all
 from bot.keyboard import publish_placeholder, admin_control
 from utils import UI, GDrive, settings, get_logger, DBManager, IMGManager
 
+
 logger = get_logger(__name__)
 
 
@@ -22,6 +23,21 @@ async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
             "{button}", UI.refresh_photo_btn
         )
     )
+
+
+async def get_users_list_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
+    users = DBManager.get_all_users()
+    if not users:
+        await upd.message.reply_text(UI.admin_users_list_no_users)
+        return
+
+    message = str()
+    for uid, uname in users:
+        message += UI.admin_users_list_item_template.replace(
+            "{user_name}", uname
+        ).replace("{user_id}", uid)
+    message += UI.admin_users_list_stats_template.replace("{count}", str(len(users)))
+    await upd.message.reply_text(message)
 
 
 async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):

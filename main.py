@@ -7,7 +7,7 @@ from telegram.ext import (
 )
 
 from utils import settings, get_logger, UI
-from bot import start_cmd, update_cmd, purge_cmd, photos_cmd
+from bot import start_cmd, update_cmd, purge_cmd, photos_cmd, get_users_list_cmd
 
 
 logger = get_logger(__name__)
@@ -26,7 +26,11 @@ def main():
     app.add_handler(
         MessageHandler(filters.Text([UI.admin_control_photo_btn]), start_cmd)
     )
+    app.add_handler(
+        MessageHandler(filters.Text([UI.admin_get_users_list]), get_users_list_cmd)
+    )
     app.add_handler(CallbackQueryHandler(photos_cmd))
+    logger.info("Bot listening...")
     app.run_polling()
 
 

@@ -24,5 +24,6 @@ def admin_control():
     keyboard = [
         [UI.admin_refresh_photo_btn, UI.admin_finish_session_btn],
         [UI.admin_control_photo_btn],
+        [UI.admin_get_users_list],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
