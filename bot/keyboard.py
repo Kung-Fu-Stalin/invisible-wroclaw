@@ -20,10 +20,13 @@ def publish_placeholder():
     return InlineKeyboardMarkup(keyboard)
 
 
-def admin_control():
-    keyboard = [
-        [UI.admin_refresh_photo_btn, UI.admin_finish_session_btn],
-        [UI.admin_control_photo_btn],
-        [UI.admin_get_users_list],
-    ]
+def admin_control(is_updating: bool = False):
+    if is_updating:
+        keyboard = [[UI.admin_refresh_photo_placeholder_btn]]
+    else:
+        keyboard = [
+            [UI.admin_refresh_photo_btn, UI.admin_finish_session_btn],
+            [UI.admin_control_photo_btn],
+            [UI.admin_get_users_list],
+        ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
