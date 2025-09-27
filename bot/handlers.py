@@ -18,30 +18,49 @@ from utils import (
 logger = get_logger(__name__)
 
 
-async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
-    await upd.message.reply_text(UI.google_drive_download_msg)
-    IMGManager.clear_dir()
-    logger.info("[!!!] Called update command...")
+async def _do_update(upd: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        await upd.message.reply_text(UI.google_drive_download_msg)
+        IMGManager.clear_dir()
+        logger.info("[!!!] Called update command...")
 
-    gdrive_control = GDrive(settings.IMAGES_ARCHIVE)
-    archive_path = gdrive_control.download_archive(settings.IMAGES_DIR)
+        gdrive_control = GDrive(settings.IMAGES_ARCHIVE)
+        archive_path = gdrive_control.download_archive(settings.IMAGES_DIR)
 
-    await upd.message.reply_text(UI.google_drive_archive_msg)
-    IMGManager.extract_archive(archive_path)
+        await upd.message.reply_text(UI.google_drive_archive_msg)
+        IMGManager.extract_archive(archive_path)
 
-    await upd.message.reply_text(UI.google_drive_start_check_images)
+        await upd.message.reply_text(UI.google_drive_start_check_images)
+        resizer = TelegramImageResizer(settings.IMAGES_DIR)
+        resizer.process_all()
 
-    resizer = TelegramImageResizer(settings.IMAGES_DIR)
-    resizer.process_all()
+        await upd.message.reply_text(UI.google_drive_finish_check_images)
 
-    await upd.message.reply_text(UI.google_drive_finish_check_images)
-
-    files = IMGManager.get_files_paths()
-    await upd.message.reply_text(
-        UI.google_drive_update_msg_template.replace("{files}", str(len(files))).replace(
-            "{button}", UI.admin_control_photo_btn
+        files = IMGManager.get_files_paths()
+        await upd.message.reply_text(
+            UI.google_drive_update_msg_template.replace(
+                "{files}", str(len(files))
+            ).replace("{button}", UI.admin_control_photo_btn),
+            reply_markup=admin_control(is_updating=False),
         )
+    except Exception as e:
+        logger.error(f"Update process failed: {e}")
+        await upd.message.reply_text(
+            UI.admin_refresh_photo_exception_msg,
+            reply_markup=admin_control(is_updating=False),
+        )
+    finally:
+        context.user_data["updating"] = False
+
+
+async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["updating"] = True
+    await upd.message.reply_text(
+        UI.google_drive_start_event,
+        reply_markup=admin_control(is_updating=True),
     )
+
+    asyncio.create_task(_do_update(upd, context))
 
 
 async def get_users_list_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
