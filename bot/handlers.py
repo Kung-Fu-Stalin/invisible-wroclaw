@@ -71,6 +71,7 @@ async def get_users_list_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
 
     message = str()
     for uid, uname in users:
+        uname = f"@{uname}" if uname else "NoUsername"
         message += UI.admin_users_list_item_template.replace(
             "{user_name}", uname
         ).replace("{user_id}", uid)
