@@ -31,20 +31,13 @@ This project is a Telegram bot designed to showcase photos of Wrocław. It allow
 
 2.  **Install dependencies:**
 
-    Using uv:
-
     ```bash
     uv sync
     source .venv/bin/activate
     ```
 
-    Alternatively, using pip:
-
-    ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r .
-    ```
+    The bot is not a pip-installable package: its dependencies are pinned in
+    `pyproject.toml` and `uv.lock`, so install them with uv.
 
 3.  **Configuration:**
 
