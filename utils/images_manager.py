@@ -91,14 +91,5 @@ class ImagesManager:
             ),
         )
 
-    @staticmethod
-    def read_image_file(file_path: str | Path, mode="rb"):
-        if not Path(file_path).is_file():
-            raise ValueError(f"Incorrect file_path: {file_path}")
-        if not Path(file_path).exists():
-            raise ValueError(f"File: {file_path} is not exist")
-        image = open(file_path, mode=mode)
-        return image
-
 
 IMGManager = ImagesManager(settings.IMAGES_DIR)

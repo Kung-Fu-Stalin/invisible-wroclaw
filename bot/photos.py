@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from telegram import CallbackQuery, InputMediaPhoto, Message
 from telegram.ext import ContextTypes
 
@@ -39,7 +41,7 @@ async def open_gallery(message: Message, context: ContextTypes.DEFAULT_TYPE):
         await ask_to_refresh(message)
         return
     sent = await message.reply_photo(
-        photo=IMGManager.read_image_file(photos[0]),
+        photo=Path(photos[0]),
         reply_markup=get_photo_selector_control(),
     )
     _galleries(context)[sent.message_id] = photos[0]
@@ -49,7 +51,7 @@ async def show_photo(
     query: CallbackQuery, context: ContextTypes.DEFAULT_TYPE, photo: str
 ):
     await query.edit_message_media(
-        media=InputMediaPhoto(IMGManager.read_image_file(photo)),
+        media=InputMediaPhoto(Path(photo)),
         reply_markup=get_photo_selector_control(),
     )
     _galleries(context)[query.message.message_id] = photo
@@ -58,9 +60,7 @@ async def show_photo(
 async def publish_photo_to_all(context, users, photo_path, query):
     for uid, uname in users:
         try:
-            msg = await context.bot.send_photo(
-                chat_id=uid, photo=IMGManager.read_image_file(photo_path)
-            )
+            msg = await context.bot.send_photo(chat_id=uid, photo=Path(photo_path))
 
             DBManager.add_published_message(
                 telegram_user_id=uid, message_id=msg.message_id, chat_id=msg.chat_id

@@ -1,4 +1,6 @@
 import asyncio
+import gc
+import warnings
 from pathlib import Path
 
 from conftest import GUIDE, TOURIST, finish_background_work
@@ -266,3 +268,18 @@ async def test_tourists_are_served_while_photos_download(bot, guide, tourist, dr
     assert bot.texts_to(TOURIST.id) == [UI.user_welcome_msg]
     assert welcomed_during_download
     assert library() == ["1.jpg"]
+
+
+async def test_showing_and_publishing_photos_leaves_no_files_open(guide, photos):
+    photos("1.jpg", "2.jpg")
+    DBManager.add_user(telegram_user_id=8)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", ResourceWarning)
+        await start_cmd(guide.says("/start"), guide.context)
+        await photos_cmd(guide.presses("next"), guide.context)
+        await photos_cmd(guide.presses("publish"), guide.context)
+        await finish_background_work()
+        gc.collect()
+
+    assert [str(w.message) for w in caught if w.category is ResourceWarning] == []
