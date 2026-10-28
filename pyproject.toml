@@ -10,19 +10,16 @@ dependencies = [
     "pillow>=13.0.0",
     "python-telegram-bot>=22.8",
     "requests>=2.34.2",
-    "tqdm>=4.70.1",
 ]
 
 [dependency-groups]
 dev = [
     "black>=26.10.1",
     "pre-commit-hooks>=6.0.0",
-    "pre-commit>=4.3.0",
+    "pre-commit>=4.7.0",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.4.1",
     "pytest-cov>=7.1.0",
-    "ruff>=0.13.1",
-    "pre-commit>=4.7.0",
     "ruff>=0.17.2",
 ]
 
