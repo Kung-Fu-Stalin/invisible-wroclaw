@@ -19,5 +19,5 @@ settings.IMAGES_DIR = Path(PROJECT_DIR, settings.IMAGES_DIR).resolve()
 settings.DATABASE_PATH = Path(PROJECT_DIR, settings.DATABASE).resolve()
 settings.UI = Path(PROJECT_DIR, "resources", "ui.json")
 
-if not settings.TELEGRAM_TOKEN:
+if not settings.get("TELEGRAM_TOKEN"):
     raise EnvironmentError("Environment variable TELEGRAM_TOKEN is not found!")
