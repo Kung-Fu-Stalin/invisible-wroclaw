@@ -31,7 +31,7 @@ from telegram import (  # noqa: E402
     Update,
     User,
 )
-from telegram.error import Forbidden  # noqa: E402
+from telegram.error import BadRequest, Forbidden  # noqa: E402
 
 from utils import DBManager, GDrive, IMGManager  # noqa: E402
 
@@ -91,6 +91,12 @@ class FakeBot:
     async def edit_message_media(
         self, media, chat_id=None, message_id=None, reply_markup=None, **_
     ):
+        # Telegram takes an upload or a file_id it handed out; a file:// URI is
+        # understood only by a local Bot API server.
+        if isinstance(media.media, str) and media.media not in self._uploaded:
+            raise BadRequest(
+                "Invalid file http url specified: unsupported url protocol"
+            )
         return self._record(
             "edit_message_media",
             chat_id,

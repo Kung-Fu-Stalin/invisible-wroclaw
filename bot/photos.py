@@ -50,8 +50,11 @@ async def open_gallery(message: Message, context: ContextTypes.DEFAULT_TYPE):
 async def show_photo(
     query: CallbackQuery, context: ContextTypes.DEFAULT_TYPE, photo: str
 ):
+    # InputMediaPhoto turns a path into a file:// URI, which only a local Bot API
+    # server accepts, so the photo goes as bytes.
+    path = Path(photo)
     await query.edit_message_media(
-        media=InputMediaPhoto(Path(photo)),
+        media=InputMediaPhoto(path.read_bytes(), filename=path.name),
         reply_markup=get_photo_selector_control(),
     )
     _galleries(context)[query.message.message_id] = photo
