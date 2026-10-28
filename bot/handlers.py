@@ -48,18 +48,18 @@ async def _do_update(upd: Update, context: ContextTypes.DEFAULT_TYPE):
             await upd.message.reply_text(UI.google_drive_finish_check_images)
             IMGManager.replace_photos_with(next_photos)
 
-        files = IMGManager.get_files_paths()
         await upd.message.reply_text(
-            UI.google_drive_update_msg_template.replace(
-                "{files}", str(len(files))
-            ).replace("{button}", UI.admin_control_photo_btn),
-            reply_markup=admin_control(is_updating=False),
+            UI.google_drive_update_msg_template.format(
+                files=len(IMGManager.get_files_paths()),
+                button=UI.admin_control_photo_btn,
+            ),
+            reply_markup=admin_control(),
         )
     except Exception:
         logger.exception("Update process failed")
         await upd.message.reply_text(
             UI.admin_refresh_photo_exception_msg,
-            reply_markup=admin_control(is_updating=False),
+            reply_markup=admin_control(),
         )
 
 
@@ -79,39 +79,35 @@ async def get_users_list_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     if not users:
         await upd.message.reply_text(UI.admin_users_list_no_users)
         return
+    await upd.message.reply_text(subscribers_report(users))
 
-    message = str()
-    for uid, uname in users:
-        uname = f"@{uname}" if uname else "NoUsername"
-        message += UI.admin_users_list_item_template.replace(
-            "{user_name}", uname
-        ).replace("{user_id}", uid)
-    message += UI.admin_users_list_stats_template.replace("{count}", str(len(users)))
-    await upd.message.reply_text(message)
+
+def subscribers_report(users: list[tuple[str, str | None]]) -> str:
+    lines = [
+        UI.admin_users_list_item_template.format(
+            user_name=f"@{name}" if name else "NoUsername", user_id=uid
+        )
+        for uid, name in users
+    ]
+    count = UI.admin_users_list_stats_template.format(count=len(users))
+    return "".join(lines) + count
 
 
 async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = upd.effective_user.id
-    user_name = upd.effective_user.username
-
-    if upd.effective_user not in ADMINS:
-        if user_name:
-            DBManager.add_user(telegram_user_id=user_id, telegram_user_name=user_name)
-            logger.info(f"User: @{user_name} has been added to the subscription list")
-        else:
-            DBManager.add_user(telegram_user_id=user_id)
-            logger.info(f"User: #{user_id} has been added to the subscription list")
-
-        await upd.message.reply_text(UI.user_welcome_msg)
-
-    else:
+    user = upd.effective_user
+    if user in ADMINS:
         await upd.message.reply_text(
-            UI.admin_welcome_msg_template.replace(
-                "{user_name}", upd.effective_user.name
-            ),
+            UI.admin_welcome_msg_template.format(user_name=user.name),
             reply_markup=admin_control(),
         )
         await open_gallery(upd.message, context)
+        return
+
+    DBManager.add_user(telegram_user_id=user.id, telegram_user_name=user.username)
+    logger.info(
+        f"User {user.name} (#{user.id}) has been added to the subscription list"
+    )
+    await upd.message.reply_text(UI.user_welcome_msg)
 
 
 @admin_only
@@ -138,7 +134,7 @@ async def photos_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @admin_only
-async def purge_cmd(update, context):
+async def purge_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     users = DBManager.get_all_users()
     for uid, uname in users:
         try:
@@ -157,4 +153,4 @@ async def purge_cmd(update, context):
             logger.error(f"Failed to delete message {msg_record.message_id}: {e}")
 
     DBManager.unsubscribe_all()
-    await update.message.reply_text(UI.admin_all_users_purged_msg)
+    await upd.message.reply_text(UI.admin_all_users_purged_msg)

@@ -31,7 +31,7 @@ def _galleries(context: ContextTypes.DEFAULT_TYPE) -> dict[int, str]:
 async def ask_to_refresh(message: Message):
     logger.info(f"No photos found in {IMGManager.path}")
     await message.reply_text(
-        UI.photos_not_found_msg_template.replace("{button}", UI.admin_refresh_photo_btn)
+        UI.photos_not_found_msg_template.format(button=UI.admin_refresh_photo_btn)
     )
 
 

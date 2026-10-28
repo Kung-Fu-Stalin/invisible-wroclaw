@@ -11,6 +11,14 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 STAGING_PREFIX = ".staging-"
+PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+
+
+def library_order(photo: Path):
+    """Numbered photos first, in number order, then the rest by name."""
+    if photo.stem.isdigit():
+        return 0, int(photo.stem), ""
+    return 1, 0, photo.name.lower()
 
 
 class ImagesManager:
@@ -60,22 +68,13 @@ class ImagesManager:
             Path(photo).replace(Path(self.path, Path(photo).name))
         logger.warning(f"Photo library has been replaced: {self.path}")
 
-    def get_files_paths(self):
-        image_extensions = {".jpg", ".jpeg", ".png"}
-        files = [
-            str(item.resolve())
+    def get_files_paths(self) -> list[str]:
+        photos = [
+            item
             for item in self.path.iterdir()
-            if item.is_file() and item.suffix.lower() in image_extensions
+            if item.is_file() and item.suffix.lower() in PHOTO_EXTENSIONS
         ]
-
-        return sorted(
-            files,
-            key=lambda f: (
-                (0, int(f.split("/")[-1].split(".")[0]))
-                if f.split("/")[-1].split(".")[0].isdigit()
-                else (1, f.lower())
-            ),
-        )
+        return [str(photo.resolve()) for photo in sorted(photos, key=library_order)]
 
 
 IMGManager = ImagesManager(settings.IMAGES_DIR)

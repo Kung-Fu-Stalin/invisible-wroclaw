@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image, ExifTags
 
 from utils.logger import get_logger
+from utils.images_manager import PHOTO_EXTENSIONS
 
 
 logger = get_logger(__name__)
@@ -15,7 +16,6 @@ class TelegramImageResizer:
         self.input_dir = Path(input_dir)
         self.max_dim = max_dim
         self.max_filesize = max_filesize
-        self.image_exts = {".jpg", ".jpeg", ".png"}
 
     @staticmethod
     def _get_exif_orientation(img):
@@ -96,5 +96,5 @@ class TelegramImageResizer:
         for root, _, files in os.walk(self.input_dir):
             for f in files:
                 p = Path(root) / f
-                if p.suffix.lower() in self.image_exts:
+                if p.suffix.lower() in PHOTO_EXTENSIONS:
                     self.process_file(p)
