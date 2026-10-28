@@ -98,7 +98,9 @@ async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
 
     else:
         await upd.message.reply_text(
-            UI.admin_welcome_msg_template.replace("{user_name}", user_name),
+            UI.admin_welcome_msg_template.replace(
+                "{user_name}", upd.effective_user.name
+            ),
             reply_markup=admin_control(),
         )
         if IMGManager.is_dir_empty():

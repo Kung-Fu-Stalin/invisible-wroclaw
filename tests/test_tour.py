@@ -39,6 +39,14 @@ async def test_guide_is_welcomed_and_sees_the_first_photo(bot, guide, photos):
     assert DBManager.get_all_users() == []
 
 
+async def test_guide_without_username_is_welcomed_by_name(bot, guide):
+    guide.user = User(id=42, first_name="Olga", is_bot=False)
+
+    await start_cmd(guide.says("/start"), guide.context)
+
+    assert bot.texts_to(42)[0] == "🏠 Админ Olga вход выполнен"
+
+
 async def test_guide_is_told_to_refresh_when_library_is_empty(bot, guide):
     await start_cmd(guide.says("/start"), guide.context)
 
