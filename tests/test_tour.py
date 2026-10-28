@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from conftest import GUIDE, TOURIST, finish_background_work
@@ -249,3 +250,19 @@ async def test_refresh_leaves_only_photos_in_the_library(guide, photos, drive):
     await finish_background_work()
 
     assert [item.name for item in IMGManager.path.iterdir()] == ["1.jpg"]
+
+
+async def test_tourists_are_served_while_photos_download(bot, guide, tourist, drive):
+    drive.photos = ["1.jpg"]
+    drive.release.clear()
+    await update_cmd(guide.says(UI.admin_refresh_photo_btn), guide.context)
+    await asyncio.to_thread(drive.downloading.wait, 2)
+
+    await start_cmd(tourist.says("/start"), tourist.context)
+    welcomed_during_download = not drive.downloaded.is_set()
+    drive.release.set()
+    await finish_background_work()
+
+    assert bot.texts_to(TOURIST.id) == [UI.user_welcome_msg]
+    assert welcomed_during_download
+    assert library() == ["1.jpg"]

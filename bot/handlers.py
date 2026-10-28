@@ -34,14 +34,16 @@ async def _do_update(upd: Update, context: ContextTypes.DEFAULT_TYPE):
 
         with IMGManager.staging() as next_photos:
             gdrive_control = GDrive(settings.IMAGES_ARCHIVE)
-            archive_path = gdrive_control.download_archive(next_photos.path)
+            archive_path = await asyncio.to_thread(
+                gdrive_control.download_archive, next_photos.path
+            )
 
             await upd.message.reply_text(UI.google_drive_archive_msg)
-            next_photos.extract_archive(archive_path)
+            await asyncio.to_thread(next_photos.extract_archive, archive_path)
 
             await upd.message.reply_text(UI.google_drive_start_check_images)
             resizer = TelegramImageResizer(next_photos.path)
-            resizer.process_all()
+            await asyncio.to_thread(resizer.process_all)
 
             await upd.message.reply_text(UI.google_drive_finish_check_images)
             IMGManager.replace_photos_with(next_photos)
@@ -53,25 +55,22 @@ async def _do_update(upd: Update, context: ContextTypes.DEFAULT_TYPE):
             ).replace("{button}", UI.admin_control_photo_btn),
             reply_markup=admin_control(is_updating=False),
         )
-    except Exception as e:
-        logger.error(f"Update process failed: {e}")
+    except Exception:
+        logger.exception("Update process failed")
         await upd.message.reply_text(
             UI.admin_refresh_photo_exception_msg,
             reply_markup=admin_control(is_updating=False),
         )
-    finally:
-        context.user_data["updating"] = False
 
 
 @admin_only
 async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["updating"] = True
     await upd.message.reply_text(
         UI.google_drive_start_event,
         reply_markup=admin_control(is_updating=True),
     )
 
-    asyncio.create_task(_do_update(upd, context))
+    context.application.create_task(_do_update(upd, context), update=upd)
 
 
 @admin_only
@@ -131,7 +130,9 @@ async def photos_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "publish" and shown in photos:
         await query.edit_message_reply_markup(reply_markup=publish_placeholder())
         users = DBManager.get_all_users()
-        asyncio.create_task(publish_photo_to_all(context, users, shown, query))
+        context.application.create_task(
+            publish_photo_to_all(context, users, shown, query), update=upd
+        )
     elif query.data == "publish":
         await show_photo(query, context, photos[0])
 
