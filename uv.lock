@@ -259,7 +259,6 @@ dependencies = [
     { name = "pillow" },
     { name = "python-telegram-bot" },
     { name = "requests" },
-    { name = "tqdm" },
 ]
 
 [package.dev-dependencies]
@@ -267,6 +266,9 @@ dev = [
     { name = "black" },
     { name = "pre-commit" },
     { name = "pre-commit-hooks" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
     { name = "ruff" },
 ]
 

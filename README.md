@@ -31,20 +31,13 @@ This project is a Telegram bot designed to showcase photos of Wrocław. It allow
 
 2.  **Install dependencies:**
 
-    Using uv:
-
     ```bash
     uv sync
     source .venv/bin/activate
     ```
 
-    Alternatively, using pip:
-
-    ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r .
-    ```
+    The bot is not a pip-installable package: its dependencies are pinned in
+    `pyproject.toml` and `uv.lock`, so install them with uv.
 
 3.  **Configuration:**
 
@@ -58,7 +51,6 @@ This project is a Telegram bot designed to showcase photos of Wrocław. It allow
     *   Configure `settings.yaml` file:
 
         *   `images_archive`: Google Drive folder URL containing the images archive.
-        *   `images_name`: Name of the images archive file.
         *   `images_dir`: Directory to store extracted images.
         *   `database`: Path to the SQLite database file.
         *   `admins`: List of Telegram usernames or user IDs with administrative privileges.
@@ -80,3 +72,29 @@ This project is a Telegram bot designed to showcase photos of Wrocław. It allow
 ```bash
 python [main.py]
 ```
+
+## Running the Tests
+
+```bash
+uv run pytest
+```
+
+The tests never touch Telegram, Google Drive or your `bot.db`: they run the
+handlers against a fake Bot API and a temporary database and photo folder.
+
+## Glossary
+
+*   **Guide** (admin): runs the tour; listed in `admins` by Telegram username
+    or numeric id. Only guides can use the control panel.
+*   **Tourist** (subscriber): anyone else who sent `/start`; receives the
+    published photos.
+*   **Photo library**: the `.jpg`, `.jpeg` and `.png` files in `images_dir`.
+    Numbered photos come first, in number order, then the rest by name.
+*   **Gallery**: a guide's message with ⬅️ / ➡️ / ✅ buttons. Every gallery
+    message remembers which photo it shows.
+*   **Publish**: send the photo a gallery shows to every tourist.
+*   **Refresh**: replace the library with the photos of the shared Google
+    Drive folder. The new set is built in a hidden staging folder and replaces
+    the library only when download, extraction and resizing all succeeded.
+*   **Finish the tour**: say goodbye to every tourist, delete the photos
+    published to them and unsubscribe everyone.

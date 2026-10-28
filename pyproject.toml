@@ -17,6 +17,17 @@ dependencies = [
 dev = [
     "black>=26.10.1",
     "pre-commit-hooks>=6.0.0",
+    "pre-commit>=4.3.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.13.1",
     "pre-commit>=4.7.0",
     "ruff>=0.17.2",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

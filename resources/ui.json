@@ -26,6 +26,6 @@
   "admin_users_list_item_template": "✅ Пользователь: {user_name} (ID: {user_id}) подписан.\n",
   "admin_users_list_stats_template": "📈 Всего: {count} подписчик(ов)",
 
-  "admin_welcome_msg_template": "🏠 Админ @{user_name} вход выполнен",
+  "admin_welcome_msg_template": "🏠 Админ {user_name} вход выполнен",
   "photos_not_found_msg_template": "⚠️ ВНИМАНИЕ! Локально не найдено ни одной фотографии! Нажмите '{button}'"
 }

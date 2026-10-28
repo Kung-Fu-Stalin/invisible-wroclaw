@@ -1,11 +1,24 @@
+import shutil
+import tempfile
 import zipfile
+from contextlib import contextmanager
 from pathlib import Path
 
-from utils import settings
+from utils.config import settings
 from utils.logger import get_logger
 
 
 logger = get_logger(__name__)
+
+STAGING_PREFIX = ".staging-"
+PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+
+
+def library_order(photo: Path):
+    """Numbered photos first, in number order, then the rest by name."""
+    if photo.stem.isdigit():
+        return 0, int(photo.stem), ""
+    return 1, 0, photo.name.lower()
 
 
 class ImagesManager:
@@ -13,24 +26,11 @@ class ImagesManager:
     def __init__(self, path: str | Path):
         logger.info(f"Creating images controller instance for {path}")
         self.path = Path(path)
-        self.create_imgs_dir()
-
-    def create_imgs_dir(self):
         self.path.mkdir(parents=True, exist_ok=True)
-
-    def is_file_exists(self, file_name: str | Path):
-        path = Path(self.path, file_name)
-        logger.info(f"Checking file by path: {path}")
-        if path.is_dir():
-            logger.error(f"{path} is a dir!")
-            raise FileNotFoundError(path)
-        return path.exists()
+        self._remove_staging_leftovers()
 
     def extract_archive(self, archive_path: str | Path):
         logger.info(f"Starting extraction from {archive_path}")
-        if not self.is_file_exists(archive_path):
-            raise FileExistsError(f"Archive by path: {archive_path} is not found")
-
         with zipfile.ZipFile(archive_path, "r") as zip_ref:
             for member in zip_ref.namelist():
                 if member.endswith("/"):
@@ -47,45 +47,34 @@ class ImagesManager:
         logger.info(f"Extraction has been successful and available here: {self.path}")
         Path(archive_path).unlink()
 
-    def is_dir_empty(self):
-        logger.warning("Checking files in directory")
-        is_empty = not any(f for f in self.path.iterdir() if not f.name.startswith("."))
-        return is_empty
+    def _remove_staging_leftovers(self):
+        for leftover in self.path.glob(f"{STAGING_PREFIX}*"):
+            logger.warning(f"Removing leftovers of an interrupted update: {leftover}")
+            shutil.rmtree(leftover, ignore_errors=True)
 
-    def clear_dir(self):
-        logger.warning(f"Clearing dir: {self.path}")
-        for item in self.path.iterdir():
-            if item.is_file() or item.is_symlink():
-                item.unlink()
-            elif item.is_dir():
-                item.rmdir()
-        logger.warning("!!!Directory has been purged!!!")
+    @contextmanager
+    def staging(self):
+        """A private library to build the next photo set in; removed afterwards."""
+        folder = Path(tempfile.mkdtemp(prefix=STAGING_PREFIX, dir=self.path))
+        try:
+            yield ImagesManager(folder)
+        finally:
+            shutil.rmtree(folder, ignore_errors=True)
 
-    def get_files_paths(self):
-        image_extensions = {".jpg", ".jpeg", ".png"}
-        files = [
-            str(item.resolve())
+    def replace_photos_with(self, other: "ImagesManager"):
+        for photo in self.get_files_paths():
+            Path(photo).unlink()
+        for photo in other.get_files_paths():
+            Path(photo).replace(Path(self.path, Path(photo).name))
+        logger.warning(f"Photo library has been replaced: {self.path}")
+
+    def get_files_paths(self) -> list[str]:
+        photos = [
+            item
             for item in self.path.iterdir()
-            if item.is_file() and item.suffix.lower() in image_extensions
+            if item.is_file() and item.suffix.lower() in PHOTO_EXTENSIONS
         ]
-
-        return sorted(
-            files,
-            key=lambda f: (
-                (0, int(f.split("/")[-1].split(".")[0]))
-                if f.split("/")[-1].split(".")[0].isdigit()
-                else (1, f.lower())
-            ),
-        )
-
-    @staticmethod
-    def read_image_file(file_path: str | Path, mode="rb"):
-        if not Path(file_path).is_file():
-            raise ValueError(f"Incorrect file_path: {file_path}")
-        if not Path(file_path).exists():
-            raise ValueError(f"File: {file_path} is not exist")
-        image = open(file_path, mode=mode)
-        return image
+        return [str(photo.resolve()) for photo in sorted(photos, key=library_order)]
 
 
 IMGManager = ImagesManager(settings.IMAGES_DIR)
