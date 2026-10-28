@@ -14,6 +14,6 @@ WORKDIR /bot
 
 COPY . /bot
 
-RUN python3 -m uv sync
+RUN python3 -m uv sync --locked --no-dev
 
 CMD ["/bot/.venv/bin/python", "main.py"]
