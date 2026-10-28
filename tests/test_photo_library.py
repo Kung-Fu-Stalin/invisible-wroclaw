@@ -4,6 +4,7 @@ from pathlib import Path
 from conftest import jpeg_bytes
 
 from utils import IMGManager
+from utils.images_manager import ImagesManager
 
 
 def names(paths):
@@ -34,3 +35,14 @@ def test_archive_is_flattened_and_same_names_are_both_kept(tmp_path):
 
     assert names(IMGManager.get_files_paths()) == ["1.jpg", "1_1.jpg"]
     assert not archive.exists()
+
+
+def test_leftovers_of_an_interrupted_refresh_are_removed_on_start(tmp_path):
+    leftover = tmp_path / ".staging-interrupted"
+    leftover.mkdir()
+    (leftover / "1.jpg").write_bytes(jpeg_bytes())
+    (tmp_path / "2.jpg").write_bytes(jpeg_bytes())
+
+    ImagesManager(tmp_path)
+
+    assert [item.name for item in tmp_path.iterdir()] == ["2.jpg"]

@@ -30,20 +30,21 @@ logger = get_logger(__name__)
 async def _do_update(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await upd.message.reply_text(UI.google_drive_download_msg)
-        IMGManager.clear_dir()
         logger.info("[!!!] Called update command...")
 
-        gdrive_control = GDrive(settings.IMAGES_ARCHIVE)
-        archive_path = gdrive_control.download_archive(settings.IMAGES_DIR)
+        with IMGManager.staging() as next_photos:
+            gdrive_control = GDrive(settings.IMAGES_ARCHIVE)
+            archive_path = gdrive_control.download_archive(next_photos.path)
 
-        await upd.message.reply_text(UI.google_drive_archive_msg)
-        IMGManager.extract_archive(archive_path)
+            await upd.message.reply_text(UI.google_drive_archive_msg)
+            next_photos.extract_archive(archive_path)
 
-        await upd.message.reply_text(UI.google_drive_start_check_images)
-        resizer = TelegramImageResizer(settings.IMAGES_DIR)
-        resizer.process_all()
+            await upd.message.reply_text(UI.google_drive_start_check_images)
+            resizer = TelegramImageResizer(next_photos.path)
+            resizer.process_all()
 
-        await upd.message.reply_text(UI.google_drive_finish_check_images)
+            await upd.message.reply_text(UI.google_drive_finish_check_images)
+            IMGManager.replace_photos_with(next_photos)
 
         files = IMGManager.get_files_paths()
         await upd.message.reply_text(

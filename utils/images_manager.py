@@ -1,4 +1,7 @@
+import shutil
+import tempfile
 import zipfile
+from contextlib import contextmanager
 from pathlib import Path
 
 from utils import settings
@@ -7,6 +10,8 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+STAGING_PREFIX = ".staging-"
+
 
 class ImagesManager:
 
@@ -14,6 +19,7 @@ class ImagesManager:
         logger.info(f"Creating images controller instance for {path}")
         self.path = Path(path)
         self.create_imgs_dir()
+        self._remove_staging_leftovers()
 
     def create_imgs_dir(self):
         self.path.mkdir(parents=True, exist_ok=True)
@@ -47,14 +53,26 @@ class ImagesManager:
         logger.info(f"Extraction has been successful and available here: {self.path}")
         Path(archive_path).unlink()
 
-    def clear_dir(self):
-        logger.warning(f"Clearing dir: {self.path}")
-        for item in self.path.iterdir():
-            if item.is_file() or item.is_symlink():
-                item.unlink()
-            elif item.is_dir():
-                item.rmdir()
-        logger.warning("!!!Directory has been purged!!!")
+    def _remove_staging_leftovers(self):
+        for leftover in self.path.glob(f"{STAGING_PREFIX}*"):
+            logger.warning(f"Removing leftovers of an interrupted update: {leftover}")
+            shutil.rmtree(leftover, ignore_errors=True)
+
+    @contextmanager
+    def staging(self):
+        """A private library to build the next photo set in; removed afterwards."""
+        folder = Path(tempfile.mkdtemp(prefix=STAGING_PREFIX, dir=self.path))
+        try:
+            yield ImagesManager(folder)
+        finally:
+            shutil.rmtree(folder, ignore_errors=True)
+
+    def replace_photos_with(self, other: "ImagesManager"):
+        for photo in self.get_files_paths():
+            Path(photo).unlink()
+        for photo in other.get_files_paths():
+            Path(photo).replace(Path(self.path, Path(photo).name))
+        logger.warning(f"Photo library has been replaced: {self.path}")
 
     def get_files_paths(self):
         image_extensions = {".jpg", ".jpeg", ".png"}

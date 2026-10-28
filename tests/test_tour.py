@@ -229,3 +229,23 @@ async def test_each_gallery_publishes_the_photo_it_shows(bot, guide, photos):
     await finish_background_work()
 
     assert bot.photos_to(8) == ["1.jpg"]
+
+
+async def test_failed_refresh_keeps_the_current_photos(bot, guide, photos, drive):
+    photos("1.jpg", "2.jpg")
+    drive.error = ConnectionAbortedError("drive is down")
+
+    await update_cmd(guide.says(UI.admin_refresh_photo_btn), guide.context)
+    await finish_background_work()
+
+    assert library() == ["1.jpg", "2.jpg"]
+
+
+async def test_refresh_leaves_only_photos_in_the_library(guide, photos, drive):
+    photos("old.jpg")
+    drive.photos = ["1.jpg"]
+
+    await update_cmd(guide.says(UI.admin_refresh_photo_btn), guide.context)
+    await finish_background_work()
+
+    assert [item.name for item in IMGManager.path.iterdir()] == ["1.jpg"]
