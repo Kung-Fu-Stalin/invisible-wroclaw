@@ -47,11 +47,6 @@ class ImagesManager:
         logger.info(f"Extraction has been successful and available here: {self.path}")
         Path(archive_path).unlink()
 
-    def is_dir_empty(self):
-        logger.warning("Checking files in directory")
-        is_empty = not any(f for f in self.path.iterdir() if not f.name.startswith("."))
-        return is_empty
-
     def clear_dir(self):
         logger.warning(f"Clearing dir: {self.path}")
         for item in self.path.iterdir():

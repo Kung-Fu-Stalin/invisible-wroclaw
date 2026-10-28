@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from conftest import GUIDE, TOURIST, finish_background_work
 from telegram import User
 
@@ -173,3 +175,57 @@ async def test_guide_is_told_when_refresh_fails(bot, guide, drive):
 
 def library():
     return [path.rsplit("/", 1)[-1] for path in IMGManager.get_files_paths()]
+
+
+NO_PHOTOS = (
+    "⚠️ ВНИМАНИЕ! Локально не найдено ни одной фотографии! "
+    "Нажмите '🔄 Обновить фотографии'"
+)
+
+
+async def test_guide_is_told_to_refresh_when_library_holds_no_photos(bot, guide):
+    Path(IMGManager.path, "notes.txt").write_text("not a photo")
+
+    await start_cmd(guide.says("/start"), guide.context)
+
+    assert bot.texts_to(GUIDE.id)[-1] == NO_PHOTOS
+
+
+async def test_gallery_button_asks_to_refresh_when_photos_are_gone(bot, guide, photos):
+    photos("1.jpg")
+    await start_cmd(guide.says("/start"), guide.context)
+    Path(IMGManager.path, "1.jpg").unlink()
+
+    await photos_cmd(guide.presses("next"), guide.context)
+
+    assert bot.texts_to(GUIDE.id)[-1] == NO_PHOTOS
+
+
+async def test_photo_removed_from_library_is_not_published(bot, guide, photos):
+    photos("1.jpg", "2.jpg", "3.jpg")
+    DBManager.add_user(telegram_user_id=8)
+    await start_cmd(guide.says("/start"), guide.context)
+    await photos_cmd(guide.presses("prev"), guide.context)
+    Path(IMGManager.path, "3.jpg").unlink()
+
+    await photos_cmd(guide.presses("publish"), guide.context)
+    await finish_background_work()
+
+    assert bot.photos_to(8) == []
+    assert bot.photos_to(GUIDE.id)[-1] == "1.jpg"
+
+
+async def test_each_gallery_publishes_the_photo_it_shows(bot, guide, photos):
+    photos("1.jpg", "2.jpg")
+    DBManager.add_user(telegram_user_id=8)
+    await start_cmd(guide.says("/start"), guide.context)
+    first_gallery = bot.to(GUIDE.id, "send_photo")[-1]["sent_id"]
+    await start_cmd(guide.says("/start"), guide.context)
+    await photos_cmd(guide.presses("next"), guide.context)
+
+    await photos_cmd(
+        guide.presses("publish", on_message_id=first_gallery), guide.context
+    )
+    await finish_background_work()
+
+    assert bot.photos_to(8) == ["1.jpg"]

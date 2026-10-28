@@ -149,7 +149,11 @@ class Chatting:
     def says(self, text) -> Update:
         return Update(update_id=next(self._ids), message=self._message(text))
 
-    def presses(self, button_data, on_message_id=500) -> Update:
+    def presses(self, button_data, on_message_id=None) -> Update:
+        """A button press on the given message, by default the latest photo."""
+        if on_message_id is None:
+            sent_photos = self.bot.to(self.user.id, "send_photo")
+            on_message_id = sent_photos[-1]["sent_id"] if sent_photos else 500
         query = CallbackQuery(
             id=str(next(self._ids)),
             from_user=self.user,

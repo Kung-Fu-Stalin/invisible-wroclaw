@@ -3,7 +3,15 @@ import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes
 from bot.auth import ADMINS, admin_only
-from bot.photos import photo_selector, publish_photo_to_all
+from bot.photos import (
+    STEPS,
+    neighbour,
+    show_photo,
+    shown_photo,
+    open_gallery,
+    ask_to_refresh,
+    publish_photo_to_all,
+)
 from bot.keyboard import publish_placeholder, admin_control
 from utils import (
     UI,
@@ -103,19 +111,7 @@ async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             reply_markup=admin_control(),
         )
-        if IMGManager.is_dir_empty():
-            logger.info(f"No files found in {settings.IMAGES_DIR}")
-            await upd.message.reply_text(
-                UI.photos_not_found_msg_template.replace(
-                    "{button}", UI.admin_refresh_photo_btn
-                )
-            )
-            return
-
-        context.user_data["idx"] = 0
-        context.user_data["first_message"] = True
-        files = IMGManager.get_files_paths()
-        await photo_selector(upd, context, file_paths=files)
+        await open_gallery(upd.message, context)
 
 
 @admin_only
@@ -123,25 +119,20 @@ async def photos_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     query = upd.callback_query
     await query.answer()
 
-    users = DBManager.get_all_users()
-    files = IMGManager.get_files_paths()
-    idx = context.user_data.get("idx", 0)
-
-    if query.data in ["next", "prev"]:
-        if query.data == "next":
-            idx = (idx + 1) % len(files)
-        else:
-            idx = (idx - 1) % len(files)
-        context.user_data["idx"] = idx
-        logger.info(f"Current idx: {idx} preview photo: {files[idx]}")
-        await photo_selector(upd, context, file_paths=files)
+    photos = IMGManager.get_files_paths()
+    if not photos:
+        await ask_to_refresh(query.message)
         return
 
-    elif query.data == "publish":
+    shown = shown_photo(context, query.message.message_id)
+    if query.data in STEPS:
+        await show_photo(query, context, neighbour(photos, shown, STEPS[query.data]))
+    elif query.data == "publish" and shown in photos:
         await query.edit_message_reply_markup(reply_markup=publish_placeholder())
-        photo_path = files[idx]
-
-        asyncio.create_task(publish_photo_to_all(context, users, photo_path, query))
+        users = DBManager.get_all_users()
+        asyncio.create_task(publish_photo_to_all(context, users, shown, query))
+    elif query.data == "publish":
+        await show_photo(query, context, photos[0])
 
 
 @admin_only
