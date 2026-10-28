@@ -72,16 +72,14 @@ class GDrive:
     def _test_accessibility(self):
         logger.info("[⚠️] Checking Google Drive directory availability...")
         response = self.session.get(self.google_storage_url, timeout=REQUEST_TIMEOUT)
-        if response.status_code == 200:
-            logger.info(
-                f"[✅] Directory: {self.google_storage_url} is available for download."
-            )
-            return True
-        else:
+        if response.status_code != 200:
             logger.error(
                 f"[❗] WARNING. Directory: {self.google_storage_url} is not available"
             )
-            raise ConnectionAbortedError
+            raise ConnectionAbortedError(self.google_storage_url)
+        logger.info(
+            f"[✅] Directory: {self.google_storage_url} is available for download."
+        )
 
     def _download_file(
         self, url: str, output_path: str | Path, chunk_size: int = 1024 * 1024

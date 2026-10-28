@@ -1,3 +1,4 @@
+import pytest
 from PIL import Image
 
 from utils import TelegramImageResizer
@@ -21,9 +22,10 @@ def test_large_photo_is_scaled_down_to_telegram_limit(tmp_path):
     assert size_of(photo) == (1280, 720)
 
 
-def test_small_photo_is_left_untouched(tmp_path):
+@pytest.mark.parametrize("size", [(640, 480), (1280, 720)])
+def test_photo_within_telegram_limits_is_left_untouched(tmp_path, size):
     photo = tmp_path / "small.jpg"
-    Image.new("RGB", (640, 480), "green").save(photo)
+    Image.new("RGB", size, "green").save(photo)
     original = photo.read_bytes()
 
     TelegramImageResizer(tmp_path).process_all()
@@ -38,7 +40,7 @@ def test_heavy_photo_is_recompressed_under_the_size_limit(tmp_path):
 
     TelegramImageResizer(tmp_path, max_filesize=limit).process_all()
 
-    assert photo.stat().st_size <= limit
+    assert limit * 0.8 < photo.stat().st_size <= limit  # no more loss than needed
     assert size_of(photo) == (1000, 1000)
 
 
@@ -71,3 +73,14 @@ def test_mirrored_sideways_photo_is_stored_upright(tmp_path):
     TelegramImageResizer(tmp_path).process_all()
 
     assert size_of(photo) == (640, 1280)
+
+
+def test_broken_photo_does_not_stop_the_others(tmp_path):
+    (tmp_path / "broken.jpg").write_bytes(b"not really a jpeg")
+    photo = tmp_path / "big.jpg"
+    Image.new("RGB", (2560, 1440), "green").save(photo)
+
+    TelegramImageResizer(tmp_path).process_all()
+
+    assert (tmp_path / "broken.jpg").read_bytes() == b"not really a jpeg"
+    assert size_of(photo) == (1280, 720)

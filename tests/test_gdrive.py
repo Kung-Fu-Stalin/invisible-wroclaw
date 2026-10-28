@@ -43,9 +43,11 @@ class FakeTakeout:
     def get(self, url, **_):
         return FakeResponse(status_code=self.folder_status)
 
-    def request(self, method, url, **_):
-        if method == "POST":
+    def request(self, method, url, json=None, **_):
+        if method == "POST" and json["items"] == [{"id": "folder-1"}]:
             return FakeResponse(json={"exportJob": {"id": "job-1"}})
+        if method == "POST":
+            return FakeResponse(status_code=404)
         if url.endswith("/job-1"):
             status = (
                 self.statuses.pop(0) if len(self.statuses) > 1 else self.statuses[0]
@@ -59,14 +61,15 @@ class FakeTakeout:
         raise AssertionError(f"unexpected request {method} {url}")
 
 
-def drive(takeout, **options):
-    return GDrive(FOLDER, session=takeout, poll_interval=0, **options)
+def drive(takeout, folder=FOLDER, **options):
+    return GDrive(folder, session=takeout, poll_interval=0, **options)
 
 
-def test_archive_is_downloaded_once_export_succeeds(tmp_path):
+@pytest.mark.parametrize("folder", [FOLDER, f"{FOLDER}?usp=sharing"])
+def test_shared_folder_is_downloaded_once_export_succeeds(tmp_path, folder):
     takeout = FakeTakeout(["QUEUED", "IN_PROGRESS", "SUCCEEDED"], archive=b"photos")
 
-    archive = drive(takeout).download_archive(tmp_path)
+    archive = drive(takeout, folder).download_archive(tmp_path)
 
     assert archive.read_bytes() == b"photos"
     assert archive.parent == tmp_path

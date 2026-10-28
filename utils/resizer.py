@@ -62,9 +62,6 @@ class TelegramImageResizer:
             logger.exception(f"Failed to prepare {path} for Telegram")
 
     def process_all(self):
-        if not self.input_dir.exists():
-            logger.info(f"No such dir: {self.input_dir}")
-            return
         for root, _, files in os.walk(self.input_dir):
             for f in files:
                 p = Path(root) / f

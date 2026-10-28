@@ -3,7 +3,7 @@ import gc
 import warnings
 from pathlib import Path
 
-from conftest import GUIDE, TOURIST, finish_background_work
+from conftest import GUIDE, TOURIST, finish_background_work, labels
 from telegram import User
 
 from bot import get_users_list_cmd, photos_cmd, purge_cmd, start_cmd, update_cmd
@@ -66,8 +66,13 @@ async def test_gallery_buttons_cycle_through_photos(bot, guide, photos):
     photos("1.jpg", "2.jpg", "3.jpg")
     await start_cmd(guide.says("/start"), guide.context)
 
-    for button in ["prev", "next", "next", "next"]:
-        await photos_cmd(guide.presses(button), guide.context)
+    for button in [
+        UI.admin_prev_photo_btn,
+        UI.admin_next_photo_btn,
+        UI.admin_next_photo_btn,
+        UI.admin_next_photo_btn,
+    ]:
+        await photos_cmd(guide.taps(button), guide.context)
 
     assert bot.photos_to(GUIDE.id) == ["1.jpg", "3.jpg", "1.jpg", "2.jpg", "3.jpg"]
 
@@ -77,9 +82,9 @@ async def test_published_photo_reaches_every_subscriber(bot, guide, photos):
     DBManager.add_user(telegram_user_id=7, telegram_user_name="anna")
     DBManager.add_user(telegram_user_id=8)
     await start_cmd(guide.says("/start"), guide.context)
-    await photos_cmd(guide.presses("next"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_next_photo_btn), guide.context)
 
-    await photos_cmd(guide.presses("publish"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_publish_photo_btn), guide.context)
     await finish_background_work()
 
     assert bot.photos_to(7) == ["2.jpg"]
@@ -98,7 +103,7 @@ async def test_subscriber_who_blocked_the_bot_does_not_stop_publishing(
     bot.blocked_by.add("7")
     await start_cmd(guide.says("/start"), guide.context)
 
-    await photos_cmd(guide.presses("publish"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_publish_photo_btn), guide.context)
     await finish_background_work()
 
     assert bot.photos_to(8) == ["1.jpg"]
@@ -130,7 +135,7 @@ async def test_finishing_the_tour_cleans_up_and_unsubscribes_everyone(
     DBManager.add_user(telegram_user_id=7, telegram_user_name="anna")
     DBManager.add_user(telegram_user_id=8)
     await start_cmd(guide.says("/start"), guide.context)
-    await photos_cmd(guide.presses("publish"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_publish_photo_btn), guide.context)
     await finish_background_work()
     to_subscribers = bot.to(7, "send_photo") + bot.to(8, "send_photo")
     published = {(str(m["chat_id"]), m["sent_id"]) for m in to_subscribers}
@@ -199,7 +204,7 @@ async def test_gallery_button_asks_to_refresh_when_photos_are_gone(bot, guide, p
     await start_cmd(guide.says("/start"), guide.context)
     Path(IMGManager.path, "1.jpg").unlink()
 
-    await photos_cmd(guide.presses("next"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_next_photo_btn), guide.context)
 
     assert bot.texts_to(GUIDE.id)[-1] == NO_PHOTOS
 
@@ -208,10 +213,10 @@ async def test_photo_removed_from_library_is_not_published(bot, guide, photos):
     photos("1.jpg", "2.jpg", "3.jpg")
     DBManager.add_user(telegram_user_id=8)
     await start_cmd(guide.says("/start"), guide.context)
-    await photos_cmd(guide.presses("prev"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_prev_photo_btn), guide.context)
     Path(IMGManager.path, "3.jpg").unlink()
 
-    await photos_cmd(guide.presses("publish"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_publish_photo_btn), guide.context)
     await finish_background_work()
 
     assert bot.photos_to(8) == []
@@ -224,10 +229,11 @@ async def test_each_gallery_publishes_the_photo_it_shows(bot, guide, photos):
     await start_cmd(guide.says("/start"), guide.context)
     first_gallery = bot.to(GUIDE.id, "send_photo")[-1]["sent_id"]
     await start_cmd(guide.says("/start"), guide.context)
-    await photos_cmd(guide.presses("next"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_next_photo_btn), guide.context)
 
     await photos_cmd(
-        guide.presses("publish", on_message_id=first_gallery), guide.context
+        guide.taps(UI.admin_publish_photo_btn, on_message_id=first_gallery),
+        guide.context,
     )
     await finish_background_work()
 
@@ -277,9 +283,80 @@ async def test_showing_and_publishing_photos_leaves_no_files_open(guide, photos)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always", ResourceWarning)
         await start_cmd(guide.says("/start"), guide.context)
-        await photos_cmd(guide.presses("next"), guide.context)
-        await photos_cmd(guide.presses("publish"), guide.context)
+        await photos_cmd(guide.taps(UI.admin_next_photo_btn), guide.context)
+        await photos_cmd(guide.taps(UI.admin_publish_photo_btn), guide.context)
         await finish_background_work()
         gc.collect()
 
     assert [str(w.message) for w in caught if w.category is ResourceWarning] == []
+
+
+GUIDE_PANEL = [
+    [UI.admin_refresh_photo_btn, UI.admin_finish_session_btn],
+    [UI.admin_control_photo_btn],
+    [UI.admin_get_users_list],
+]
+
+
+async def test_guide_gets_the_control_panel_on_start(bot, guide):
+    await start_cmd(guide.says("/start"), guide.context)
+
+    assert labels(bot.to(GUIDE.id, "send_message")[0]["markup"]) == GUIDE_PANEL
+
+
+async def test_panel_is_locked_while_photos_refresh(bot, guide, drive):
+    drive.photos = ["1.jpg"]
+
+    await update_cmd(guide.says(UI.admin_refresh_photo_btn), guide.context)
+    await finish_background_work()
+
+    keyboards = [m["markup"] for m in bot.to(GUIDE.id, "send_message") if m["markup"]]
+    assert labels(keyboards[0]) == [[UI.admin_refresh_photo_placeholder_btn]]
+    assert labels(keyboards[-1]) == GUIDE_PANEL
+
+
+async def test_gallery_restarts_from_the_first_photo_when_its_photo_is_gone(
+    bot, guide, photos
+):
+    photos("1.jpg", "2.jpg", "3.jpg")
+    await start_cmd(guide.says("/start"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_next_photo_btn), guide.context)
+    Path(IMGManager.path, "2.jpg").unlink()
+
+    await photos_cmd(guide.taps(UI.admin_next_photo_btn), guide.context)
+
+    assert bot.photos_to(GUIDE.id) == ["1.jpg", "2.jpg", "1.jpg"]
+
+
+async def test_finishing_the_tour_reaches_everyone_who_did_not_block_the_bot(
+    bot, guide, photos
+):
+    photos("1.jpg")
+    DBManager.add_user(telegram_user_id=7, telegram_user_name="anna")
+    DBManager.add_user(telegram_user_id=8)
+    await start_cmd(guide.says("/start"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_publish_photo_btn), guide.context)
+    await finish_background_work()
+    bot.blocked_by.add("7")
+
+    await purge_cmd(guide.says(UI.admin_finish_session_btn), guide.context)
+
+    assert bot.texts_to(8) == [UI.user_goodbye_msg]
+    assert [str(m["chat_id"]) for m in bot.all("delete_message")] == ["8"]
+    assert DBManager.get_all_users() == []
+    assert bot.texts_to(GUIDE.id)[-1] == UI.admin_all_users_purged_msg
+
+
+async def test_finishing_a_tour_with_one_tourist_removes_their_photo(
+    bot, guide, photos
+):
+    photos("1.jpg")
+    DBManager.add_user(telegram_user_id=7, telegram_user_name="anna")
+    await start_cmd(guide.says("/start"), guide.context)
+    await photos_cmd(guide.taps(UI.admin_publish_photo_btn), guide.context)
+    await finish_background_work()
+    published = bot.to(7, "send_photo")[0]["sent_id"]
+
+    await purge_cmd(guide.says(UI.admin_finish_session_btn), guide.context)
+
+    assert [m["message_id"] for m in bot.to(7, "delete_message")] == [published]

@@ -27,6 +27,7 @@ from telegram import (  # noqa: E402
     InputFile,
     InputMediaPhoto,
     Message,
+    MessageEntity,
     Update,
     User,
 )
@@ -56,6 +57,7 @@ class FakeBot:
     """Stands in for the Telegram Bot API and records what the bot sent."""
 
     defaults = None
+    username = "invisible_wroclaw_bot"
 
     def __init__(self):
         self.calls = []
@@ -120,8 +122,27 @@ class FakeBot:
         return [details["text"] for details in self.to(chat_id, "send_message")]
 
     def photos_to(self, chat_id):
-        sent = self.to(chat_id, "send_photo") + self.to(chat_id, "edit_message_media")
-        return [details["photo"] for details in sent]
+        return [
+            details["photo"]
+            for name, details in self.calls
+            if name in ("send_photo", "edit_message_media")
+            and str(details["chat_id"]) == str(chat_id)
+        ]
+
+    def keyboard_of(self, message_id):
+        """The keyboard the message with this id shows right now."""
+        for name, details in reversed(self.calls):
+            sent_here = name == "send_photo" and details["sent_id"] == message_id
+            edited_here = (
+                name.startswith("edit_") and details["message_id"] == message_id
+            )
+            if sent_here or edited_here:
+                return details["markup"]
+
+
+def labels(keyboard):
+    """Button texts of a reply keyboard, row by row."""
+    return [[button.text for button in row] for row in keyboard.keyboard]
 
 
 class Chatting:
@@ -142,6 +163,7 @@ class Chatting:
             chat=Chat(id=self.user.id, type=Chat.PRIVATE),
             from_user=self.user,
             text=text,
+            entities=_command_entity(text),
         )
         message.set_bot(self.bot)
         return message
@@ -149,11 +171,20 @@ class Chatting:
     def says(self, text) -> Update:
         return Update(update_id=next(self._ids), message=self._message(text))
 
+    def taps(self, label, on_message_id=None) -> Update:
+        """A tap on the button with this label, by default under the latest photo."""
+        message_id = on_message_id or self._latest_photo()
+        data = next(
+            button.callback_data
+            for row in self.bot.keyboard_of(message_id).inline_keyboard
+            for button in row
+            if button.text == label
+        )
+        return self.presses(data, on_message_id=message_id)
+
     def presses(self, button_data, on_message_id=None) -> Update:
-        """A button press on the given message, by default the latest photo."""
-        if on_message_id is None:
-            sent_photos = self.bot.to(self.user.id, "send_photo")
-            on_message_id = sent_photos[-1]["sent_id"] if sent_photos else 500
+        """Raw callback data, as a forged or outdated button would send."""
+        on_message_id = on_message_id or self._latest_photo()
         query = CallbackQuery(
             id=str(next(self._ids)),
             from_user=self.user,
@@ -163,6 +194,16 @@ class Chatting:
         )
         query.set_bot(self.bot)
         return Update(update_id=next(self._ids), callback_query=query)
+
+    def _latest_photo(self):
+        sent_photos = self.bot.to(self.user.id, "send_photo")
+        return sent_photos[-1]["sent_id"] if sent_photos else 500
+
+
+def _command_entity(text):
+    if not text or not text.startswith("/"):
+        return None
+    return [MessageEntity(MessageEntity.BOT_COMMAND, offset=0, length=len(text))]
 
 
 class FakeApplication:
