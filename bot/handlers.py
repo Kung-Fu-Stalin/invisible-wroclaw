@@ -156,7 +156,5 @@ async def purge_cmd(update, context):
         except Exception as e:
             logger.error(f"Failed to delete message {msg_record.message_id}: {e}")
 
-    DBManager.clear_all_published_messages()
-
-    DBManager.clear_all()
+    DBManager.unsubscribe_all()
     await update.message.reply_text(UI.admin_all_users_purged_msg)

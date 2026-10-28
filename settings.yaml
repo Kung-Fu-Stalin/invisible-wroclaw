@@ -1,5 +1,4 @@
 images_archive: arhive_url_here
-images_name: wroclaw_archive.zip
 images_dir: imgs
 database: bot.db
 admins: []

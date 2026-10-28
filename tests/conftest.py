@@ -180,8 +180,7 @@ async def finish_background_work():
 
 @pytest.fixture(autouse=True)
 def fresh_bot_state():
-    DBManager.clear_all_published_messages()
-    DBManager.clear_all()
+    DBManager.unsubscribe_all()
     for item in IMGManager.path.iterdir():
         if item.is_dir():
             shutil.rmtree(item)

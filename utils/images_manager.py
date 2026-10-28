@@ -4,7 +4,7 @@ import zipfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from utils import settings
+from utils.config import settings
 from utils.logger import get_logger
 
 
@@ -18,25 +18,11 @@ class ImagesManager:
     def __init__(self, path: str | Path):
         logger.info(f"Creating images controller instance for {path}")
         self.path = Path(path)
-        self.create_imgs_dir()
-        self._remove_staging_leftovers()
-
-    def create_imgs_dir(self):
         self.path.mkdir(parents=True, exist_ok=True)
-
-    def is_file_exists(self, file_name: str | Path):
-        path = Path(self.path, file_name)
-        logger.info(f"Checking file by path: {path}")
-        if path.is_dir():
-            logger.error(f"{path} is a dir!")
-            raise FileNotFoundError(path)
-        return path.exists()
+        self._remove_staging_leftovers()
 
     def extract_archive(self, archive_path: str | Path):
         logger.info(f"Starting extraction from {archive_path}")
-        if not self.is_file_exists(archive_path):
-            raise FileExistsError(f"Archive by path: {archive_path} is not found")
-
         with zipfile.ZipFile(archive_path, "r") as zip_ref:
             for member in zip_ref.namelist():
                 if member.endswith("/"):

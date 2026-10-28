@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import io
 import os
 from pathlib import Path
@@ -100,10 +98,3 @@ class TelegramImageResizer:
                 p = Path(root) / f
                 if p.suffix.lower() in self.image_exts:
                     self.process_file(p)
-
-
-if __name__ == "__main__":
-    resizer = TelegramImageResizer(
-        input_dir="../imgs", max_dim=1280, max_filesize=10 * 1024**2
-    )
-    resizer.process_all()

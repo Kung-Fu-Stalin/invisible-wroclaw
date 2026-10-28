@@ -58,7 +58,6 @@ This project is a Telegram bot designed to showcase photos of Wrocław. It allow
     *   Configure `settings.yaml` file:
 
         *   `images_archive`: Google Drive folder URL containing the images archive.
-        *   `images_name`: Name of the images archive file.
         *   `images_dir`: Directory to store extracted images.
         *   `database`: Path to the SQLite database file.
         *   `admins`: List of Telegram usernames or user IDs with administrative privileges.
