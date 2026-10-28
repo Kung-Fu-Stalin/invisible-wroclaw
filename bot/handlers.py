@@ -2,6 +2,7 @@ import asyncio
 
 from telegram import Update
 from telegram.ext import ContextTypes
+from bot.auth import ADMINS, admin_only
 from bot.photos import photo_selector, publish_photo_to_all
 from bot.keyboard import publish_placeholder, admin_control
 from utils import (
@@ -53,6 +54,7 @@ async def _do_update(upd: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["updating"] = False
 
 
+@admin_only
 async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["updating"] = True
     await upd.message.reply_text(
@@ -63,6 +65,7 @@ async def update_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(_do_update(upd, context))
 
 
+@admin_only
 async def get_users_list_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     users = DBManager.get_all_users()
     if not users:
@@ -83,9 +86,7 @@ async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = upd.effective_user.id
     user_name = upd.effective_user.username
 
-    is_user = user_id not in settings.ADMINS and user_name not in settings.ADMINS
-
-    if is_user:
+    if upd.effective_user not in ADMINS:
         if user_name:
             DBManager.add_user(telegram_user_id=user_id, telegram_user_name=user_name)
             logger.info(f"User: @{user_name} has been added to the subscription list")
@@ -115,6 +116,7 @@ async def start_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
         await photo_selector(upd, context, file_paths=files)
 
 
+@admin_only
 async def photos_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
     query = upd.callback_query
     await query.answer()
@@ -140,6 +142,7 @@ async def photos_cmd(upd: Update, context: ContextTypes.DEFAULT_TYPE):
         asyncio.create_task(publish_photo_to_all(context, users, photo_path, query))
 
 
+@admin_only
 async def purge_cmd(update, context):
     users = DBManager.get_all_users()
     for uid, uname in users:
