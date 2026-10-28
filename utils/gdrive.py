@@ -1,10 +1,8 @@
-import sys
 import time
 from urllib.parse import urlparse
 from pathlib import Path, PurePosixPath
 
 import requests
-from tqdm import tqdm
 
 from utils.logger import get_logger
 
@@ -90,35 +88,17 @@ class GDrive:
             method="GET", url=url, stream=True, timeout=REQUEST_TIMEOUT
         ) as response:
             response.raise_for_status()
-            total_size = int(response.headers.get("Content-Length", 0))
 
             output_path = Path(output_path)
             if output_path.is_dir():
                 output_path = Path(output_path, ARCHIVE_NAME)
 
-            with (
-                output_path.open("wb") as file,
-                tqdm(
-                    total=total_size,
-                    unit="B",
-                    unit_scale=True,
-                    unit_divisor=1024,
-                    desc=output_path.name,
-                    initial=0,
-                    ascii=True,
-                    file=sys.stdout,
-                    ncols=80,
-                    bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
-                ) as progress,
-            ):
+            with output_path.open("wb") as file:
                 for chunk in response.iter_content(chunk_size=chunk_size):
-                    if chunk:
-                        file.write(chunk)
-                        progress.update(len(chunk))
+                    file.write(chunk)
 
-            logger.info(
-                f"[✅] Download finished! File is available here: {output_path}"
-            )
+            size_mb = output_path.stat().st_size / 1024**2
+            logger.info(f"[✅] Downloaded {size_mb:.1f} MB to {output_path}")
             return output_path
 
     def download_archive(self, download_path: str | Path):
