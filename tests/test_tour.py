@@ -360,3 +360,18 @@ async def test_finishing_a_tour_with_one_tourist_removes_their_photo(
     await purge_cmd(guide.says(UI.admin_finish_session_btn), guide.context)
 
     assert [m["message_id"] for m in bot.to(7, "delete_message")] == [published]
+
+
+async def test_published_photo_is_uploaded_once_for_all_subscribers(bot, guide, photos):
+    photos("1.jpg")
+    for tourist_id in (7, 8, 9):
+        DBManager.add_user(telegram_user_id=tourist_id)
+    bot.blocked_by.add("7")
+    await start_cmd(guide.says("/start"), guide.context)
+
+    await photos_cmd(guide.taps(UI.admin_publish_photo_btn), guide.context)
+    await finish_background_work()
+
+    sent = [bot.to(tourist_id, "send_photo")[0] for tourist_id in (8, 9)]
+    assert [s["photo"] for s in sent] == ["1.jpg", "1.jpg"]
+    assert [s["uploaded"] for s in sent] == [True, False]

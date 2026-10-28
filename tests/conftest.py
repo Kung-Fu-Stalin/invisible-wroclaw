@@ -63,6 +63,7 @@ class FakeBot:
         self.calls = []
         self.blocked_by = set()
         self._message_ids = itertools.count(1000)
+        self._uploaded = {}  # file_id -> photo name, as Telegram remembers uploads
 
     def _record(self, method, chat_id, **details):
         if str(chat_id) in self.blocked_by:
@@ -77,9 +78,15 @@ class FakeBot:
         return self._record("send_message", chat_id, text=text, markup=reply_markup)
 
     async def send_photo(self, chat_id, photo, reply_markup=None, **_):
-        return self._record(
-            "send_photo", chat_id, photo=photo_name(photo), markup=reply_markup
+        uploaded = not isinstance(photo, str)
+        name = photo_name(photo) if uploaded else self._uploaded[photo]
+        sent = self._record(
+            "send_photo", chat_id, photo=name, uploaded=uploaded, markup=reply_markup
         )
+        file_id = f"file-id-of-{name}"
+        self._uploaded[file_id] = name
+        sent.photo = (SimpleNamespace(file_id=file_id),)
+        return sent
 
     async def edit_message_media(
         self, media, chat_id=None, message_id=None, reply_markup=None, **_

@@ -58,9 +58,11 @@ async def show_photo(
 
 
 async def publish_photo_to_all(context, users, photo_path, query):
+    photo = Path(photo_path)
     for uid, uname in users:
         try:
-            msg = await context.bot.send_photo(chat_id=uid, photo=Path(photo_path))
+            msg = await context.bot.send_photo(chat_id=uid, photo=photo)
+            photo = msg.photo[-1].file_id  # uploaded once, reused for the others
 
             DBManager.add_published_message(
                 telegram_user_id=uid, message_id=msg.message_id, chat_id=msg.chat_id
