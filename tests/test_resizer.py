@@ -4,6 +4,7 @@ from utils import TelegramImageResizer
 
 ORIENTATION = 0x0112
 ROTATED_90_CLOCKWISE = 6
+MIRRORED_AND_ROTATED = 5
 
 
 def size_of(path):
@@ -59,3 +60,14 @@ def test_files_that_are_not_photos_are_ignored(tmp_path):
     TelegramImageResizer(tmp_path).process_all()
 
     assert notes.read_text() == "not a photo"
+
+
+def test_mirrored_sideways_photo_is_stored_upright(tmp_path):
+    photo = tmp_path / "selfie.jpg"
+    exif = Image.Exif()
+    exif[ORIENTATION] = MIRRORED_AND_ROTATED
+    Image.new("RGB", (2000, 1000), "green").save(photo, exif=exif)
+
+    TelegramImageResizer(tmp_path).process_all()
+
+    assert size_of(photo) == (640, 1280)
